@@ -11,13 +11,14 @@
 #include <vector>
 #include <unordered_map>
 #include <conio.h>
+#include <cstring>
 
 #define BRAINFUCK_THREAD_ARRAY_SIZE 65535
 
 class BrainFuckThread {
     public:
-        BrainFuckThread(const std::string &source)
-        : _source(source), _source_size(source.size()) {}
+        BrainFuckThread(const std::string &source, bool use_special)
+        : _source(source), _source_size(source.size()), _use_special(use_special) {}
 
         ~BrainFuckThread() {
             delete[] _memory;
@@ -139,23 +140,27 @@ class BrainFuckThread {
         }
 
         void handle_copy_right() {
+            if (!_use_special) return;
             uint8_t origin = _memory[_memory_pointer];
             _memory_pointer ++;
             _memory[_memory_pointer] = origin;
         }
 
         void handle_copy_left() {
+            if (!_use_special) return;
             uint8_t origin = _memory[_memory_pointer];
             _memory_pointer --;
             _memory[_memory_pointer] = origin;
         }
 
         void handle_doubling() {
+            if (!_use_special) return;
             uint8_t origin = _memory[_memory_pointer];
             _memory[_memory_pointer] = origin * 2;
         }
 
         void handle_halfing() {
+            if (!_use_special) return;
             uint8_t origin = _memory[_memory_pointer];
             _memory[_memory_pointer] = origin / 2;
         }
@@ -166,13 +171,23 @@ class BrainFuckThread {
         uint8_t* _memory = new uint8_t[BRAINFUCK_THREAD_ARRAY_SIZE]();
         uint16_t _memory_pointer = 0;
         std::unordered_map<size_t, size_t> _loop_map;
+        bool _use_special;
 };
 
-int main(int argc, char const *argv[]) {
-    if (argc != 2) {
+bool search_element(const char *haystack[], int haystack_size, const char *needle) {
+    for (size_t i = 0; i < haystack_size; i++) {
+        if (strcmp(haystack[i], needle) == 0) return true;
+    }
+    return false;
+}
+
+int main(int argc, const char *argv[]) {
+    if (argc < 2) {
         std::cerr << "Use: " << argv[0] << " <filename>" << std::endl;
         return -1;
     }
+
+    bool use_special = search_element(argv, argc, "--use-special");
 
     std::ifstream source_file_input_stream(argv[1]);
     if (!source_file_input_stream) {
@@ -185,10 +200,8 @@ int main(int argc, char const *argv[]) {
         std::istreambuf_iterator<char>()
     };
 
-    BrainFuckThread current_thread(source);
+    BrainFuckThread current_thread(source, use_special);
     if (!current_thread.lex()) return -1;
     current_thread.execute();
-
-    std::cout << "\n\n<EOF> Executing finished" << std::endl;
     return 0;
 }
